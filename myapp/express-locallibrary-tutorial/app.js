@@ -7,7 +7,44 @@ var logger = require('morgan');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
+const cpus = require('os').cpus().length;
+const cluster = require('cluster');
+
+
 var app = express();
+
+// Import the mongoose module
+var mongoose = require('mongoose')
+
+// Set up default mongoose connection
+var mongoDB = 'mongodb+srv://lucas:256b652c@locallibrary.qnqiajk.mongodb.net/library?retryWrites=true&w=majority'
+mongoose.connect(mongoDB);
+
+//Get the default connection
+var db = mongoose.connection;
+
+//Bind connection to error event(to get notification of connection errors)
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.once('open', (err, resp) => {
+  console.log('Server on')
+})
+
+//Checando quantos processadores estão ativos
+if(cluster.isMaster) {
+  for(let i; i < cpus; i++) {
+    const worker = cluster.fork()
+    worker.on('exit', () => {
+      console.log('worker error')
+      cluster.fork()
+    })
+  }
+} else {
+  app.listen({ port: 3000}, () => {
+    console.log('server on')
+  })
+}
+
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
